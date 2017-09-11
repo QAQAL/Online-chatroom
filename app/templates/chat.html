@@ -1,0 +1,119 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>chat</title>
+        <script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/1.3.6/socket.io.min.js"></script>
+    </head>
+    <body>
+        <div id='id-div-channels' class="rc-left">
+            <h1 id = 'id-div-channels-title'>聊天室</h1>
+            <a class="rc-channel" href="#">大厅</a>
+            <a class="rc-channel" href="#">游戏</a>
+            <a class="rc-channel" href="#">水区</a>
+        </div>
+        <h1>chat</h1>
+        <div>
+            <textarea id="id_chat_area" cols="80" rows="16" disabled></textarea>
+        </div>
+        <input id="text" size="80" placeholder="输入聊天消息"><br><br>
+
+    <script>
+var socket
+// 默认进入大厅频道
+var current_channel = '大厅'
+
+var e = function(sel) {
+    return document.querySelector(sel)
+}
+
+var join_channel = function(channel) {
+    e('#id_chat_area').innerHTML = ''
+    current_channel = channel
+    // console.log('切换房间', self, current_channel)
+    change_channel(current_channel)
+    clear_board()
+    socket.emit('joined', {
+        msg: channel,
+    })
+}
+
+var change_channel = function(channel) {
+    var title = '聊天室 - ' + channel
+    if(current_channel == '') {
+        title = '聊天室 - 未加入聊天室'
+    }
+    var titleTag = e("#id-div-channels-title")
+    titleTag.innerHTML = title
+}
+
+var clear_board = function() {
+    e("#id_chat_area").value = ''
+}
+
+var __main = function() {
+    // 初始化 websocket 的方法
+    var namespace = '/chat'
+    var url = 'ws://' + document.domain + ':' + location.port + namespace
+    socket = io.connect(url)
+    // on 函数用来绑定事件, connect 是连接到后端 websocket 成功的时候发生的
+    socket.on('connect', function() {
+        console.log('connect')
+        clear_board()
+    })
+
+    // 注册 2 个 websocket 消息, 分别是有人加入聊天室的消息和收到别人发送了新消息的消息
+    // 这个消息是后端发到前端后, 自动触发的
+    var chatArea = e('#id_chat_area')
+    socket.on('status', function(data) {
+        chatArea.value += `< ${data.msg} >\n`
+    })
+    socket.on('message', function(data) {
+        chatArea.value += (data.msg + '\n')
+    })
+
+    // 加入默认频道
+    join_channel(current_channel)
+
+    // 给 input 绑定一个 回车键发送消息 的事件
+    // keypress 事件是在用户按键的时候发生的
+    e('#text').addEventListener('keypress', function(event) {
+        // console.log('keypress', event)
+        if (event.key == 'Enter') {
+            if (current_channel == '') {
+                console.log("没有频道:", current_channel)
+                alert('未加入频道')
+            } else {
+                // 得到用户输入的消息
+                msg = e('#text').value
+                // 发送消息给后端
+                var data =  {
+                    msg: msg,
+                    room:current_channel,
+                }
+                socket.emit('xcxi', data)
+                // 清空用户输入
+                e('#text').value = ''
+            }
+        }
+    })
+
+    // 这是切换频道的事件
+    e('body').addEventListener('click', function(event){
+        var self = event.target
+        if(self.classList.contains('rc-channel')) {
+            // 离开频道
+            if (current_channel != '') {
+                 socket.emit('left', {}, function() {
+                    console.log("left room")
+                 })
+            }
+            // 加入房间
+            join_channel(current_channel)
+        }
+    })
+}
+
+__main()
+</script>
+    </body>
+</html>
