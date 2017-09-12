@@ -5,3 +5,5 @@
 
 - 实现多人同时在线聊天和聊天室切换功能。
 
+![image](https://github.com/QAQAL/Online-chatroom/blob/master/demo/chat.gif)
+
